@@ -38,6 +38,8 @@ import           Stack.Prelude
 import           Stack.Types.Compiler ( ActualCompiler )
 import           Stack.Types.NamedComponent ( NamedComponent (..) )
 
+import Data.List (intercalate)
+
 -- | Common settings for both dependency and project package.
 data CommonPackage = CommonPackage
   { cpGPD :: !(IO GenericPackageDescription)
@@ -49,6 +51,9 @@ data CommonPackage = CommonPackage
   , cpCabalConfigOpts :: ![Text]
   , cpHaddocks :: !Bool
   }
+
+instance Show CommonPackage where
+  show cp = T.unpack $ T.intercalate (T.pack " ") (cpGhcOptions cp)
 
 -- | Flag showing if package comes from a snapshot needed to ignore dependency
 -- bounds between such packages
@@ -69,12 +74,40 @@ data DepPackage = DepPackage
     -- See https://github.com/commercialhaskell/stackage/issues/3185
   }
 
+instance Show DepPackage where
+  show dp = intercalate ","
+    [ showDepPackageLocation (dpLocation dp) ++ " " ++ show (dpFromSnapshot dp)
+    , show (dpCommon dp)
+    ]
+
+showDepPackageLocation :: PackageLocation -> String
+showDepPackageLocation (PLImmutable (PLIHackage (PackageIdentifier _ version) _ _)) = intercalate " "
+  [ "Hackage"
+  , versionString version
+  ]
+showDepPackageLocation (PLImmutable (PLIArchive (Archive loc _ _ _) (PackageMetadata (PackageIdentifier _ version) _))) = intercalate " "
+  [ "Archive"
+  , show loc
+  , versionString version
+  ]
+showDepPackageLocation (PLImmutable (PLIRepo r _)) = intercalate " "
+  [ "Repo"
+  , T.unpack (repoUrl r)
+  ]
+showDepPackageLocation (PLMutable (ResolvedPath (RelFilePath r) _)) = intercalate " "
+  [ "Dir"
+  , T.unpack r
+  ]
+
 -- | A view of a project package needed for resolving components
 data ProjectPackage = ProjectPackage
   { ppCommon :: !CommonPackage
   , ppCabalFP    :: !(Path Abs File)
   , ppResolvedDir :: !(ResolvedPath Dir)
   }
+
+instance Show ProjectPackage where
+  show (ProjectPackage c _ _) = show c
 
 -- | A view of a package installed in the global package database also could
 -- include marker for a replaced global package (could be replaced because of a
@@ -83,6 +116,10 @@ data GlobalPackage
   = GlobalPackage !Version
   | ReplacedGlobalPackage ![PackageName]
   deriving Eq
+
+instance Show GlobalPackage where
+  show (GlobalPackage version) = versionString version
+  show (ReplacedGlobalPackage ps) = intercalate " " (map packageNameString ps)
 
 isReplacedGlobal :: GlobalPackage -> Bool
 isReplacedGlobal (ReplacedGlobalPackage _) = True
@@ -124,6 +161,7 @@ data Target
   -- ^ Build all of the default components.
   | TargetComps !(Set NamedComponent)
   -- ^ Only build specific components
+  deriving Show
 
 data PackageType = PTProject | PTDependency
   deriving (Eq, Show)
@@ -133,7 +171,7 @@ data PackageType = PTProject | PTDependency
 data SMTargets = SMTargets
   { smtTargets :: !(Map PackageName Target)
   , smtDeps :: !(Map PackageName DepPackage)
-  }
+  } deriving Show
 
 -- | The final source map, taking an 'SMTargets' and applying all command line
 -- flags and GHC options.
@@ -156,7 +194,7 @@ data SourceMap = SourceMap
     -- Can be broken if someone installs new global packages. We can document
     -- that as not supported, _or_ we could actually include all of this in the
     -- hash and make Stack more resilient.
-  }
+  } deriving Show
 
 -- | A unique hash for the immutable portions of a 'SourceMap'.
 newtype SourceMapHash
