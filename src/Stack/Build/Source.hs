@@ -1,6 +1,9 @@
 {-# LANGUAGE NoImplicitPrelude     #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE MultiWayIf #-}
 
 -- Load information on package sources
 module Stack.Build.Source
@@ -248,15 +251,9 @@ generalCabalConfigOpts bconfig boptsCli name isTarget isLocal = concat
 -- configuration and commandline.
 generalGhcOptions :: BuildConfig -> BuildOptsCLI -> Bool -> Bool -> [Text]
 generalGhcOptions bconfig boptsCli isTarget isLocal = concat
-    [ if boptsExeProfile bopts
-        then
-            if isLocal
-                then ["-fprof-auto","-fprof-cafs"]
-                else
-                    if boptsLibProfile bopts
-                        then ["-fprof-auto","-fprof-cafs"]
-                        else ["-fno-prof-auto"]
-        else []
+    [ if | not (boptsExeProfile bopts)      -> []
+         | isLocal || boptsLibProfile bopts -> ["-fprof-auto","-fprof-cafs"]
+         | otherwise                        -> ["-fno-prof-auto"]
     ,  Map.findWithDefault [] AGOEverything (configGhcOptionsByCat config)
     , if isLocal
         then Map.findWithDefault [] AGOLocals (configGhcOptionsByCat config)

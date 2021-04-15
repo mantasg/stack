@@ -172,6 +172,10 @@ import qualified System.FilePath as FP
 import           System.Permissions ( setFileExecutable )
 import           System.Uname ( getRelease )
 
+import Text.Pretty.Simple (pShowNoColor)
+import qualified Data.Text.Lazy.IO as LT
+import Data.Time
+
 -- | Type representing exceptions thrown by functions exported by the
 -- "Stack.Setup" module
 data SetupException
@@ -679,6 +683,21 @@ setupEnv needTargets boptsCLI mResolveMissingGHC = do
         , envConfigSourceMapHash = sourceMapHash
         , envConfigCompilerPaths = compilerPaths
         }
+
+  liftIO $ do
+        -- sourceMapDumpSrc <- lookupEnv "STACK_SOURCE_MAP_DUMP"
+        -- case sourceMapDumpSrc of
+        --     Just src -> LT.writeFile src (pShowNoColor sourceMap)
+        --     Nothing  -> return ()
+
+        sourceMapDumpDir <- lookupEnv "STACK_SOURCE_MAP_DUMP_DIR"
+        case sourceMapDumpDir of
+            Just src -> do
+                t <- formatTime defaultTimeLocale "%FT%H-%M-%S-%q" <$> getCurrentTime
+                LT.writeFile (src <> "/" <> t) (pShowNoColor sourceMap)
+                LT.writeFile (src <> "/latest") (pShowNoColor sourceMap)
+            Nothing  -> return ()
+
 
   -- extra installation bin directories
   mkDirs <- runRIO envConfig0 extraBinDirs
