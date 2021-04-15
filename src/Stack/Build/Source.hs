@@ -248,30 +248,39 @@ generalCabalConfigOpts bconfig boptsCli name isTarget isLocal = concat
 -- configuration and commandline.
 generalGhcOptions :: BuildConfig -> BuildOptsCLI -> Bool -> Bool -> [Text]
 generalGhcOptions bconfig boptsCli isTarget isLocal = concat
-  [ Map.findWithDefault [] AGOEverything (configGhcOptionsByCat config)
-  , if isLocal
-      then Map.findWithDefault [] AGOLocals (configGhcOptionsByCat config)
-      else []
-  , if isTarget
-      then Map.findWithDefault [] AGOTargets (configGhcOptionsByCat config)
-      else []
-  , concat [["-fhpc"] | isLocal && toCoverage (boptsTestOpts bopts)]
-  , if boptsLibProfile bopts || boptsExeProfile bopts
-      then ["-fprof-auto", "-fprof-cafs"]
-      else []
-  , [ "-g" | not $ boptsLibStrip bopts || boptsExeStrip bopts ]
-  , if includeExtraOptions
-      then boptsCLIGhcOptions boptsCli
-      else []
+    [ if boptsExeProfile bopts
+        then
+            if isLocal
+                then ["-fprof-auto","-fprof-cafs"]
+                else
+                    if boptsLibProfile bopts
+                        then ["-fprof-auto","-fprof-cafs"]
+                        else ["-fno-prof-auto"]
+        else []
+    ,  Map.findWithDefault [] AGOEverything (configGhcOptionsByCat config)
+    , if isLocal
+        then Map.findWithDefault [] AGOLocals (configGhcOptionsByCat config)
+        else []
+    , if isTarget
+        then Map.findWithDefault [] AGOTargets (configGhcOptionsByCat config)
+        else []
+    , concat [["-fhpc"] | isLocal && toCoverage (boptsTestOpts bopts)]
+    , if boptsLibProfile bopts || boptsExeProfile bopts
+        then ["-fprof-auto", "-fprof-cafs"]
+        else []
+    , [ "-g" | not $ boptsLibStrip bopts || boptsExeStrip bopts ]
+    , if includeExtraOptions
+        then boptsCLIGhcOptions boptsCli
+        else []
   ]
- where
-  bopts = configBuild config
-  config = view configL bconfig
-  includeExtraOptions =
-    case configApplyGhcOptions config of
-      AGOTargets -> isTarget
-      AGOLocals -> isLocal
-      AGOEverything -> True
+  where
+    bopts = configBuild config
+    config = view configL bconfig
+    includeExtraOptions =
+        case configApplyGhcOptions config of
+            AGOTargets -> isTarget
+            AGOLocals -> isLocal
+            AGOEverything -> True
 
 splitComponents :: [NamedComponent]
                 -> (Set Text, Set Text, Set Text)
