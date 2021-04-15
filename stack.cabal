@@ -377,6 +377,7 @@ library
     , persistent >=2.14.0.0 && <2.15
     , persistent-sqlite
     , pretty
+    , pretty-simple
     , process >=1.6.13.2
     , project-template
     , random
@@ -495,6 +496,7 @@ executable stack
     , persistent >=2.14.0.0 && <2.15
     , persistent-sqlite
     , pretty
+    , pretty-simple
     , process >=1.6.13.2
     , project-template
     , random
@@ -594,6 +596,7 @@ executable stack-integration-test
     , persistent >=2.14.0.0 && <2.15
     , persistent-sqlite
     , pretty
+    , pretty-simple
     , process >=1.6.13.2
     , project-template
     , random
@@ -706,6 +709,7 @@ test-suite stack-unit-test
     , persistent >=2.14.0.0 && <2.15
     , persistent-sqlite
     , pretty
+    , pretty-simple
     , process >=1.6.13.2
     , project-template
     , random
